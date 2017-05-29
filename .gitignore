@@ -1,0 +1,5 @@
+*.mat
+*.ipynb
+__pycache__
+extended_stopper_symbols.txt
+.DS_Store
