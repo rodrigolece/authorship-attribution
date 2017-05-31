@@ -55,6 +55,19 @@ class WANcontext(object):
     def findTokens(self, list_tokens):
         return [i for i, token in enumerate(self.all_tokens) if token  in list_tokens]
 
+    def idxMostCommon(self, N):
+        counts = np.array([self.all_tokens.count(fword) for fword in self.function_words])
+        sort_idx = counts.argsort()[::-1]
+
+        zero_idx = counts[sort_idx].argmin() # since this array is sorted argmin gives the first zero
+
+        if min(N, zero_idx - 1) == N: # zero_idx - 1 is the last function word to appear
+            return sort_idx[:N]
+        else:
+            print("Warning: number of requested function words is more than there are in text")
+            print("Returning %d instead" % (zero_idx - 1))
+            return sort_idx[:zero_idx-1]
+
 
     def sliceFunctionWords(self, idx_stopper, idx_fwords):
         out = []
@@ -177,7 +190,7 @@ def attributionFunction(unknown, *candidate_chains):
         entropies = np.zeros(no_candidates)
         for i, chain in enumerate(candidate_chains):
             entropies[i] = relativeEntropy(chain, unknown)
-            # print(entropies[i])
+            print(entropies[i])
 
         return np.argmin(entropies)
 
