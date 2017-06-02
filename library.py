@@ -189,7 +189,7 @@ def attributionFunction(unknown, *candidate_chains):
     else:
         entropies = np.zeros(no_candidates)
         for i, chain in enumerate(candidate_chains):
-            entropies[i] = relativeEntropy(chain, unknown)
+            entropies[i] = relativeEntropy(unknown, chain)
             print(entropies[i])
 
         return np.argmin(entropies)
