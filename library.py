@@ -26,12 +26,12 @@ def memoise(fun):
   return memoised_fun
 
 class WANcontext(object):
-    def __init__(self, filename, function_words, alpha, D = 10, num_words = 10000):
+    def __init__(self, filename, function_words, alpha, D = 10):#, num_words = 10000):
         self.filename = filename
         self.function_words = function_words
         self.alpha = alpha
         self.D = D
-        self.num_words = num_words
+        # self.num_words = num_words
 
         directory = './texts'
         file = os.path.join(directory, filename)
@@ -47,6 +47,7 @@ class WANcontext(object):
 
         print("Number of sentences parsed: %d" % num_sentences)
         self.all_tokens = all_tokens
+        self.corpus = list(all_tokens)
 
     @memoise
     def findFunctionWord(self, word):
@@ -67,6 +68,55 @@ class WANcontext(object):
             print("Warning: number of requested function words is more than there are in text")
             print("Returning %d instead" % (zero_idx - 1))
             return sort_idx[:zero_idx-1]
+
+    def takeSample(self, num_words):
+        punctuation_symbols = ['.', '?', '!', ';', ',', "''", '``', '--']
+
+        idx_punctuation = self.findTokens(punctuation_symbols)
+        no_punctuation = len(idx_punctuation)
+        density_punctuation = no_punctuation / len(self.all_tokens)
+        if num_words > len(self.all_tokens) - no_punctuation:
+            print("Error: Sample size is bigger than corpus")
+            return
+
+        # Careful! the method is currently seeded!
+        np.random.seed(0) # <------------ seed
+
+        init_idx = np.random.randint(len(self.all_tokens) - no_punctuation  - num_words)
+        # this has bias to avoid the end of the text, we should use less than no_stoppers
+
+
+        estimate_punct = int(density_punctuation * num_words)
+
+        end_idx = init_idx + num_words + estimate_punct
+
+        # Now we correct our estimate
+        real_punct = len([idx for idx in idx_punctuation if init_idx < idx and idx < end_idx])
+        current_num_words = end_idx - init_idx - real_punct
+
+        if estimate_punct < real_punct:
+            while current_num_words < num_words:
+                end_idx += 1
+                if self.all_tokens[end_idx] not in punctuation_symbols:
+                    current_num_words += 1
+        elif estimate_punct > real_punct:
+            while current_num_words > num_words:
+                end_idx -= 1
+                if self.all_tokens[end_idx] not in punctuation_symbols:
+                    current_num_words -= 1
+
+        return (init_idx, end_idx)
+
+    def sampleCorpus(self, num_words_sample, num_words_corpus):
+      init_idx, end_idx = self.takeSample(num_words_sample)
+
+      # We take sample out of the corpus
+      self.sample = self.all_tokens[init_idx:end_idx]
+      self.corpus = self.corpus[:init_idx] + self.corpus[end_idx:]
+
+      # We restrict the size of the corpus
+      # init_idx, end_idx = self.takeSample(num_words_corpus)
+      # self.all_tokens = self.all_tokens[:init_idx] + self.all_tokens[end_idx:]
 
 
     def sliceFunctionWords(self, idx_stopper, idx_fwords):
@@ -193,6 +243,23 @@ def attributionFunction(unknown, *candidate_chains):
             print(entropies[i])
 
         return np.argmin(entropies)
+
+
+## ---------------------- Corpus tools ---------------------- ##
+
+def buildCorpus(*authors):
+    no_authors = len(authors)
+    if no_authors == 1:
+        author = authors[0]
+        cmd = "cat texts/" + author + "_*.txt >> tmp; mv tmp texts/" + author + "_all.txt"
+    elif no_authors > 1:
+        cmd = ""
+        for author in authors:
+            cmd += "cat texts/" + author + "_*.txt >> tmp; "
+        cmd += "mv tmp texts/test.txt"
+    # print(cmd)
+    system(cmd)
+    # If author does not exist then document is not created
 
 
 
