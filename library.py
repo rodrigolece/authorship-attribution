@@ -53,8 +53,8 @@ class WANcontext(object):
     def findFunctionWord(self, word):
         return self.function_words.index(word)
 
-    def findTokens(self, list_tokens):
-        return [i for i, token in enumerate(self.all_tokens) if token  in list_tokens]
+    def idxSubset(self, subset, all_tokens):
+          return [i for i, token in enumerate(all_tokens) if token  in subset]
 
     def idxMostCommon(self, N):
         counts = np.array([self.all_tokens.count(fword) for fword in self.function_words])
@@ -72,22 +72,20 @@ class WANcontext(object):
     def takeSample(self, num_words):
         punctuation_symbols = ['.', '?', '!', ';', ',', "''", '``', '--']
 
-        idx_punctuation = self.findTokens(punctuation_symbols)
+        idx_punctuation = self.idxSubset(punctuation_symbols, self.corpus)
         no_punctuation = len(idx_punctuation)
-        density_punctuation = no_punctuation / len(self.all_tokens)
-        if num_words > len(self.all_tokens) - no_punctuation:
+        density_punctuation = no_punctuation / len(self.corpus)
+        if num_words > len(self.corpus) - no_punctuation:
             print("Error: Sample size is bigger than corpus")
             return
 
         # Careful! the method is currently seeded!
         np.random.seed(0) # <------------ seed
 
-        init_idx = np.random.randint(len(self.all_tokens) - no_punctuation  - num_words)
-        # this has bias to avoid the end of the text, we should use less than no_stoppers
-
+        init_idx = np.random.randint(len(self.corpus) - no_punctuation  - num_words)
+        # this has bias to avoid the end of the text, we should use less than
 
         estimate_punct = int(density_punctuation * num_words)
-
         end_idx = init_idx + num_words + estimate_punct
 
         # Now we correct our estimate
@@ -97,12 +95,12 @@ class WANcontext(object):
         if estimate_punct < real_punct:
             while current_num_words < num_words:
                 end_idx += 1
-                if self.all_tokens[end_idx] not in punctuation_symbols:
+                if self.corpus[end_idx] not in punctuation_symbols:
                     current_num_words += 1
         elif estimate_punct > real_punct:
             while current_num_words > num_words:
                 end_idx -= 1
-                if self.all_tokens[end_idx] not in punctuation_symbols:
+                if self.corpus[end_idx] not in punctuation_symbols:
                     current_num_words -= 1
 
         return (init_idx, end_idx)
@@ -115,15 +113,22 @@ class WANcontext(object):
       self.corpus = self.corpus[:init_idx] + self.corpus[end_idx:]
 
       # We restrict the size of the corpus
-      # init_idx, end_idx = self.takeSample(num_words_corpus)
-      # self.all_tokens = self.all_tokens[:init_idx] + self.all_tokens[end_idx:]
+      init_idx, end_idx = self.takeSample(num_words_corpus)
+      self.corpus = self.corpus[init_idx:end_idx]
 
+    def resetCorpus(self):
+        self.corpus = list(self.all_tokens)
+        self.sample = None
 
     def sliceFunctionWords(self, idx_stopper, idx_fwords):
         out = []
         tmp = []
-
         num_fwords = len(idx_fwords)
+
+        # When we sample we might loose punctuation at end of sentence
+        M_stopper, M_fwords = max(idx_stopper), max(idx_fwords)
+        if M_stopper < M_fwords:
+            idx_stopper.append(M_fwords + 1)
 
         counter_stopper = 0
         current_stopper = idx_stopper[counter_stopper]
@@ -145,12 +150,16 @@ class WANcontext(object):
 
         return out
 
-    def fillMatrix(self):
+    def fillMatrix(self, subset):
+        if subset == 'sample':
+            idx_stopper = self.idxSubset(stopper_symbols, self.sample) # this gives the indices of the stopper tokens
+            idx_fwords = self.idxSubset(self.function_words, self.sample) # same for the function words
+        elif subset == 'corpus':
+            idx_stopper = self.idxSubset(stopper_symbols, self.corpus)
+            idx_fwords = self.idxSubset(self.function_words, self.corpus)
+
         n = len(self.function_words)
         out = np.zeros((n,n))
-
-        idx_stopper = self.findTokens(stopper_symbols) # this gives the indices of the stopper tokens in the text
-        idx_fwords = self.findTokens(self.function_words) # same for the function words
 
         fwords_in_sentences = self.sliceFunctionWords(idx_stopper, idx_fwords)
 
@@ -162,9 +171,12 @@ class WANcontext(object):
                 for next_idx in next_indices:
                     d = next_idx - current_idx
 
-                    current_word = self.all_tokens[current_idx]
-                    next_word = self.all_tokens[next_idx]
-    #                 print(current_word, next_word, d)
+                    if subset == 'sample':
+                        current_word = self.sample[current_idx]
+                        next_word = self.sample[next_idx]
+                    elif subset == 'corpus':
+                        current_word = self.corpus[current_idx]
+                        next_word = self.corpus[next_idx]
 
                     current_lin_word = self.findFunctionWord(current_word)
                     next_lin_word = self.findFunctionWord(next_word)
@@ -174,7 +186,7 @@ class WANcontext(object):
         return out
 
     def normaliseMatrix(self, mat):
-        n,_ = mat.shape
+        n, _ = mat.shape
 
         out = mat.copy()
 
@@ -188,9 +200,9 @@ class WANcontext(object):
 
         return out
 
-    def buildWAN(self, save_WAN = False):
+    def buildWAN(self, subset, save_WAN = False):
 
-        out = self.normaliseMatrix(self.fillMatrix())
+        out = self.normaliseMatrix(self.fillMatrix(subset))
 
         if save_WAN:
             mat_filename = self.filename[:-4] + '.mat'
