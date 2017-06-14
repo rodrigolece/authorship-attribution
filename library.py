@@ -4,6 +4,7 @@ import numpy as np
 import scipy.io
 import scipy.linalg as la
 import itertools
+from os import system
 
 
 # The function words_are not defined globally because they will be attribution dependent
@@ -80,7 +81,7 @@ class WANcontext(object):
             return
 
         # Careful! the method is currently seeded!
-        np.random.seed(0) # <------------ seed
+        # np.random.seed(0) # <------------ seed
 
         init_idx = np.random.randint(len(self.corpus) - no_punctuation  - num_words)
         # this has bias to avoid the end of the text, we should use less than
@@ -243,18 +244,51 @@ def relativeEntropy(chain1, chain2):
 
     return out
 
-def attributionFunction(unknown, *candidate_chains):
+def attributionFunction(unknown, candidate_chains):
     no_candidates = len(candidate_chains)
     if no_candidates < 2:
-        print("Number of candidates must at least 2")
+        print("Number of candidates be must at least 2")
         return
-    else:
-        entropies = np.zeros(no_candidates)
-        for i, chain in enumerate(candidate_chains):
-            entropies[i] = relativeEntropy(unknown, chain)
-            print(entropies[i])
 
-        return np.argmin(entropies)
+    entropies = np.zeros(no_candidates)
+    for i, chain in enumerate(candidate_chains):
+        entropies[i] = relativeEntropy(unknown, chain)
+        print(entropies[i])
+
+    return np.argmin(entropies)
+
+def attributionTest(authors, function_words, alpha, num_words_sample, num_words_corpus, D = 10, N = 10):
+    no_candidates = len(authors)
+    if no_candidates < 2:
+        print("Number of candidates must be at least 2")
+        return
+
+    counts = np.zeros(no_candidates)
+    WANs = {}
+
+    for candidate in authors[1:]:
+      # It would be nice to check if 'author_all.txt' already exists and if it doesn't we could
+      # automatically build it
+        ctx = WANcontext(candidate + "_all.txt", function_words, alpha)
+        ctx.sampleCorpus(0, num_words_corpus)
+        WANs[candidate]= ctx.buildWAN('corpus')
+
+    # The sample always comes from the first author
+    main_author = authors[0]
+    main_ctx = WANcontext(main_author + "_all.txt", function_words, alpha)
+
+    for i in range(N):
+        main_ctx.sampleCorpus(num_words_sample, num_words_corpus)
+        WANs[main_author] = main_ctx.buildWAN('corpus')
+        sample_WAN = main_ctx.buildWAN('sample')
+
+        chains = [WANs[candidate] for candidate in authors]
+        idx = attributionFunction(sample_WAN, chains)
+        counts[idx] += 1
+
+        main_ctx.resetCorpus()
+
+    return (counts[0]/N, counts)
 
 
 ## ---------------------- Corpus tools ---------------------- ##
