@@ -6,6 +6,9 @@ import scipy.linalg as la
 import itertools
 from os import system
 
+text_directory = '../texts'
+save_directory = '../mat_files'
+
 
 # The function words_are not defined globally because they will be attribution dependent
 # with open('function_words.txt') as fw:
@@ -34,8 +37,7 @@ class WANcontext(object):
         self.D = D
         # self.num_words = num_words
 
-        directory = '../texts'
-        file = os.path.join(directory, filename)
+        file = os.path.join(text_directory, filename)
 
         num_sentences = 0
 
@@ -187,12 +189,7 @@ class WANcontext(object):
 
         return out
 
-    # TODO
-    # def normaliseMatrix(self, mat):
-        # N = ...
-        # return mat/N
-
-    def normaliseMatrix(self, mat): # markovMatrix
+    def markovMatrix(self, mat):
         n, _ = mat.shape
 
         out = mat.copy()
@@ -207,14 +204,17 @@ class WANcontext(object):
 
         return out
 
-    def buildWAN(self, subset, save_WAN = False):
-        # TODO build WAN should take either 1/N or Markov normalization
-        out = self.normaliseMatrix(self.fillMatrix(subset))
+    def buildWAN(self, subset, save_WAN = False, markov = False):
+        if markov:
+            out = self.markovMatrix(self.fillMatrix(subset))
+        else:
+            out = self.fillMatrix(subset)
 
         if save_WAN:
-            mat_filename = 'mat_files/' + self.filename[:-4] + '.mat'
-            WAN_name = self.filename[:-4] + '_WAN'
-            scipy.io.savemat(mat_filename, mdict={WAN_name : out})
+            mat_filename = self.filename[:-4] + '.mat'
+            full_filename = os.path.join(save_directory, mat_filename)
+            # WAN_name = self.filename[:-4] + '_WAN'
+            scipy.io.savemat(full_filename, mdict={'WAN': out})
             return
         else:
             return out
