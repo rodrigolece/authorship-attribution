@@ -83,9 +83,6 @@ class WANcontext(object):
             print("Error: Sample size is bigger than corpus")
             return
 
-        # Careful! the method is currently seeded!
-        np.random.seed(0) # <------------ seed
-
         init_idx = np.random.randint(len(self.corpus) - no_punctuation  - num_words)
         # this has bias to avoid the end of the text, we should use less than
 
@@ -109,16 +106,19 @@ class WANcontext(object):
 
         return (init_idx, end_idx)
 
-    def sampleCorpus(self, num_words_sample, num_words_corpus):
-      init_idx, end_idx = self.takeSample(num_words_sample)
+    def sampleCorpus(self, num_words_sample, num_words_corpus, seed=None):
+        if seed != None:
+            np.random.seed(seed)
 
-      # We take sample out of the corpus
-      self.sample = self.all_tokens[init_idx:end_idx]
-      self.corpus = self.corpus[:init_idx] + self.corpus[end_idx:]
+        init_idx, end_idx = self.takeSample(num_words_sample)
 
-      # We restrict the size of the corpus
-      init_idx, end_idx = self.takeSample(num_words_corpus)
-      self.corpus = self.corpus[init_idx:end_idx]
+        # We take sample out of the corpus
+        self.sample = self.all_tokens[init_idx:end_idx]
+        self.corpus = self.corpus[:init_idx] + self.corpus[end_idx:]
+
+        # We restrict the size of the corpus
+        init_idx, end_idx = self.takeSample(num_words_corpus)
+        self.corpus = self.corpus[init_idx:end_idx]
 
     def resetCorpus(self):
         self.corpus = list(self.all_tokens)
