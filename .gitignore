@@ -3,3 +3,10 @@
 __pycache__
 extended_stopper_symbols.txt
 .DS_Store
+csv_files/
+mat_files/
+matlab/*
+!matlab/library
+segarra_authorship_detection.c
+texts/
+python/profilling/
