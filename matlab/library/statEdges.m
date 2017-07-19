@@ -15,6 +15,8 @@ if nargout == 0 % we plot the  histogram of weights
     loglog(center_counts, counts)
     title(['mean: ', num2str(mn, 4), '; median: ', num2str(med, 4)], ...
         'FontSize', 15)
+elseif nargout == 1
+    varargout{1} = mn;
 elseif nargout == 2
     varargout{1} = mn;
     varargout{2} = med;
