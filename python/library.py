@@ -16,6 +16,9 @@ save_directory = '../mat_files'
 #     for line in fw:
 #         function_words = nltk.word_tokenize(line)
 
+class SampleError(Exception):
+    pass
+
 with open('stopper_symbols.txt') as st:
     for line in st:
         stopper_symbols = nltk.word_tokenize(line)
@@ -80,8 +83,7 @@ class WANcontext(object):
         no_punctuation = len(idx_punctuation)
         density_punctuation = no_punctuation / len(self.all_tokens)
         if num_words > len(self.all_tokens) - no_punctuation:
-            print("Error: Sample size is bigger than text")
-            return None
+            raise SampleError("Sample size is bigger than length of text")
 
         # init_idx = np.random.randint(len(self.all_tokens) - no_punctuation  - num_words)
         # this has bias to avoid the end of the text
@@ -90,7 +92,7 @@ class WANcontext(object):
 
         end_idx = inf;
         while end_idx > len(self.all_tokens):
-            init_idx = np.random.randint(len(self.all_tokens) - int(1.3*estimate_punct)  - num_words)
+            init_idx = np.random.randint(len(self.all_tokens) - int(1.2*estimate_punct)  - num_words)
             end_idx = init_idx + num_words + estimate_punct
 
         # Now we correct our estimate
@@ -114,9 +116,20 @@ class WANcontext(object):
         if seed != None:
             np.random.seed(seed)
 
-        init_idx, end_idx = self.takeSample(num_words)
-        self.sample = self.all_tokens[init_idx:end_idx]
+        init_idx = None
+        num_iters = 0
+        while init_idx is None and num_iters < 5:
+            try:
+                init_idx, end_idx = self.takeSample(num_words)
+                self.sample = self.all_tokens[init_idx:end_idx]
+            except SampleError:
+                raise
+                break
+            except ValueError:
+                num_iters += 1
 
+        if num_iters == 5:
+            raise SampleError("Index ot of range: try with smaller sample")
 
     def resetSample(self):
         self.sample = None
