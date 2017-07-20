@@ -23,6 +23,9 @@ with open('stopper_symbols.txt') as st:
     for line in st:
         stopper_symbols = nltk.word_tokenize(line)
 
+punctuation_symbols = ['.', '?', '!', ';', ',', "''", '``', '--']
+# punctuation_symbols = stopper_symbols + [',', "''", '``', '--']
+
 def memoise(fun):
   cache = {}
   def memoised_fun(*args, **kwargs):
@@ -75,10 +78,11 @@ class WANcontext(object):
             print("Returning %d instead" % (zero_idx - 1))
             return sort_idx[:zero_idx-1]
 
-    def takeSample(self, num_words):
-        punctuation_symbols = ['.', '?', '!', ';', ',', "''", '``', '--']
-        # punctuation_symbols = stopper_symbols + [',', "''", '``', '--']
+    def numWords(self):
+        idx_punctuation = self.idxSubset(punctuation_symbols, self.all_tokens)
+        return len(self.all_tokens) - len(idx_punctuation)
 
+    def takeSample(self, num_words):
         idx_punctuation = self.idxSubset(punctuation_symbols, self.all_tokens)
         no_punctuation = len(idx_punctuation)
         density_punctuation = no_punctuation / len(self.all_tokens)
@@ -126,6 +130,8 @@ class WANcontext(object):
                 raise
                 break
             except ValueError:
+                num_iters += 1
+            except IndexError:
                 num_iters += 1
 
         if num_iters == 5:
