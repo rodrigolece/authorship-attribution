@@ -23,8 +23,8 @@ with open('stopper_symbols.txt') as st:
     for line in st:
         stopper_symbols = nltk.word_tokenize(line)
 
-punctuation_symbols = ['.', '?', '!', ';', ',', "''", '``', '--']
-# punctuation_symbols = stopper_symbols + [',', "''", '``', '--']
+punctuation_symbols = ['.', '?', '!', ';', ',', ':', "''", '``', '--', "(", ")", "'",  "*"]
+# punctuation_symbols = stopper_symbols + [',', ':', "''", '``', '--']
 
 def memoise(fun):
   cache = {}
@@ -77,6 +77,10 @@ class WANcontext(object):
             print("Warning: number of requested function words is more than there are in text")
             print("Returning %d instead" % (zero_idx - 1))
             return sort_idx[:zero_idx-1]
+
+    def frequencySubset(self, subset):
+        idx = self.idxSubset(subset, self.all_tokens)
+        return sum( idx[i] - idx[i-1] for i in range(1,len(idx)) ) / (len(idx) - 1)
 
     def numWords(self):
         idx_punctuation = self.idxSubset(punctuation_symbols, self.all_tokens)
