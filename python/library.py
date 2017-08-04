@@ -10,6 +10,9 @@ from math import inf
 text_directory = '../texts'
 save_directory = '../mat_files'
 
+def setSaveDirectory(directory):
+    global save_directory
+    save_directory = directory
 
 # The function words_are not defined globally because they will be attribution dependent
 # with open('function_words.txt') as fw:
@@ -55,7 +58,7 @@ class WANcontext(object):
             for stopper in stopper_symbols:
                 num_sentences += all_tokens.count(stopper)
 
-        print("Number of sentences parsed: %d" % num_sentences)
+        # print("Number of sentences parsed: %d" % num_sentences)
         self.all_tokens = all_tokens
 
     @memoise
@@ -86,63 +89,63 @@ class WANcontext(object):
         idx_punctuation = self.idxSubset(punctuation_symbols, self.all_tokens)
         return len(self.all_tokens) - len(idx_punctuation)
 
-    def takeSample(self, num_words):
-        idx_punctuation = self.idxSubset(punctuation_symbols, self.all_tokens)
-        no_punctuation = len(idx_punctuation)
-        density_punctuation = no_punctuation / len(self.all_tokens)
-        if num_words > len(self.all_tokens) - no_punctuation:
-            raise SampleError("Sample size is bigger than length of text")
+    # def takeSample(self, num_words):
+    #     idx_punctuation = self.idxSubset(punctuation_symbols, self.all_tokens)
+    #     no_punctuation = len(idx_punctuation)
+    #     density_punctuation = no_punctuation / len(self.all_tokens)
+    #     if num_words > len(self.all_tokens) - no_punctuation:
+    #         raise SampleError("Sample size is bigger than length of text")
+    #
+    #     # init_idx = np.random.randint(len(self.all_tokens) - no_punctuation  - num_words)
+    #     # this has bias to avoid the end of the text
+    #
+    #     estimate_punct = int(density_punctuation * num_words)
+    #
+    #     end_idx = inf;
+    #     while end_idx > len(self.all_tokens):
+    #         init_idx = np.random.randint(len(self.all_tokens) - int(1.2*estimate_punct)  - num_words)
+    #         end_idx = init_idx + num_words + estimate_punct
+    #
+    #     # Now we correct our estimate
+    #     real_punct = len([idx for idx in idx_punctuation if init_idx < idx and idx < end_idx])
+    #     current_num_words = end_idx - init_idx - real_punct
+    #
+    #     if estimate_punct < real_punct:
+    #         while current_num_words < num_words:
+    #             end_idx += 1
+    #             if self.all_tokens[end_idx] not in punctuation_symbols:
+    #                 current_num_words += 1
+    #     elif estimate_punct > real_punct:
+    #         while current_num_words > num_words:
+    #             end_idx -= 1
+    #             if self.all_tokens[end_idx] not in punctuation_symbols:
+    #                 current_num_words -= 1
+    #
+    #     return (init_idx, end_idx)
 
-        # init_idx = np.random.randint(len(self.all_tokens) - no_punctuation  - num_words)
-        # this has bias to avoid the end of the text
-
-        estimate_punct = int(density_punctuation * num_words)
-
-        end_idx = inf;
-        while end_idx > len(self.all_tokens):
-            init_idx = np.random.randint(len(self.all_tokens) - int(1.2*estimate_punct)  - num_words)
-            end_idx = init_idx + num_words + estimate_punct
-
-        # Now we correct our estimate
-        real_punct = len([idx for idx in idx_punctuation if init_idx < idx and idx < end_idx])
-        current_num_words = end_idx - init_idx - real_punct
-
-        if estimate_punct < real_punct:
-            while current_num_words < num_words:
-                end_idx += 1
-                if self.all_tokens[end_idx] not in punctuation_symbols:
-                    current_num_words += 1
-        elif estimate_punct > real_punct:
-            while current_num_words > num_words:
-                end_idx -= 1
-                if self.all_tokens[end_idx] not in punctuation_symbols:
-                    current_num_words -= 1
-
-        return (init_idx, end_idx)
-
-    def sampleCorpus(self, num_words, seed=None):
-        if seed != None:
-            np.random.seed(seed)
-
-        init_idx = None
-        num_iters = 0
-        while init_idx is None and num_iters < 5:
-            try:
-                init_idx, end_idx = self.takeSample(num_words)
-                self.sample = self.all_tokens[init_idx:end_idx]
-            except SampleError:
-                raise
-                break
-            except ValueError:
-                num_iters += 1
-            except IndexError:
-                num_iters += 1
-
-        if num_iters == 5:
-            raise SampleError("Index ot of range: try with smaller sample")
-
-    def resetSample(self):
-        self.sample = None
+    # def sampleCorpus(self, num_words, seed=None):
+    #     if seed != None:
+    #         np.random.seed(seed)
+    #
+    #     init_idx = None
+    #     num_iters = 0
+    #     while init_idx is None and num_iters < 5:
+    #         try:
+    #             init_idx, end_idx = self.takeSample(num_words)
+    #             self.sample = self.all_tokens[init_idx:end_idx]
+    #         except SampleError:
+    #             raise
+    #             break
+    #         except ValueError:
+    #             num_iters += 1
+    #         except IndexError:
+    #             num_iters += 1
+    #
+    #     if num_iters == 5:
+    #         raise SampleError("Index ot of range: try with smaller sample")
+    #
+    # def resetSample(self):
+    #     self.sample = None
 
     def sliceFunctionWords(self, idx_stopper, idx_fwords):
         out = []
@@ -175,12 +178,12 @@ class WANcontext(object):
         return out
 
     def fillMatrix(self):
-        if self.sample == None:
-            print("Error: no sample has been defined yet (call ctx.sampleCorpus)")
-            return None
+        # if self.sample == None:
+        #     print("Error: no sample has been defined yet (call ctx.sampleCorpus)")
+        #     return None
 
-        idx_stopper = self.idxSubset(stopper_symbols, self.sample) # this gives the indices of the stopper tokens
-        idx_fwords = self.idxSubset(self.function_words, self.sample) # same for the function words
+        idx_stopper = self.idxSubset(stopper_symbols, self.all_tokens) # this gives the indices of the stopper tokens
+        idx_fwords = self.idxSubset(self.function_words, self.all_tokens) # same for the function words
 
         n = len(self.function_words)
         out = np.zeros((n,n))
@@ -195,8 +198,8 @@ class WANcontext(object):
                 for next_idx in next_indices:
                     d = next_idx - current_idx
 
-                    current_word = self.sample[current_idx]
-                    next_word = self.sample[next_idx]
+                    current_word = self.all_tokens[current_idx]
+                    next_word = self.all_tokens[next_idx]
 
                     current_lin_word = self.findFunctionWord(current_word)
                     next_lin_word = self.findFunctionWord(next_word)
@@ -220,18 +223,18 @@ class WANcontext(object):
 
         return out
 
-    def buildWAN(self, num_words, seed = None, num_samples = 1, save_WAN = False, markov = False):
-        if seed != None:
-            np.random.seed(seed)
-
-        self.sampleCorpus(num_words)
+    def buildWAN(self, save_WAN = False, markov = False):
+        # if seed != None:
+        #     np.random.seed(seed)
+        #
+        # self.sampleCorpus(num_words)
         out = self.fillMatrix()
 
         # If we have more than one sample we take an average of all the WANs
-        for i in range(num_samples-1):
-            self.sampleCorpus(num_words)
-            out += self.fillMatrix()
-        out /= num_samples
+        # for i in range(num_samples-1):
+        #     self.sampleCorpus(num_words)
+        #     out += self.fillMatrix()
+        # out /= num_samples
 
         if markov:
             out = self.markovMatrix(WAN)
