@@ -168,8 +168,9 @@ class WANcontext(object):
                 else:
                     out.append(tmp)
                     tmp = [fword]
-                    counter_stopper += 1
-                    current_stopper = idx_stopper[counter_stopper]
+                    while current_stopper < fword:
+                        counter_stopper += 1
+                        current_stopper = idx_stopper[counter_stopper]
 
             else: # for the last fword do
                 tmp.append(fword)
