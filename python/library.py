@@ -238,7 +238,7 @@ class WANcontext(object):
         # out /= num_samples
 
         if markov:
-            out = self.markovMatrix(WAN)
+            out = self.markovMatrix(out)
 
         if save_WAN:
             mat_filename = self.filename[:-4] + '.mat'
