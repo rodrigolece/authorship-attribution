@@ -5,7 +5,7 @@ import scipy.io
 import scipy.linalg as la
 import itertools
 from os import system
-from math import inf
+from math import inf, factorial
 
 text_directory = '../texts'
 save_directory = '../mat_files'
@@ -280,18 +280,71 @@ def relativeEntropy(chain1, chain2):
 
     return out
 
-def attributionFunction(unknown, candidate_chains):
+def relativeEntropyDiscreteTime(chain1, chain2, k):
+    n, _ = chain1.shape
+    pi = steadyState(chain1)
+
+    out = 0.0
+
+    for power in range(1,k+1):
+        c1k = np.linalg.matrix_power(chain1, power)
+        c2k = np.linalg.matrix_power(chain2, power)
+
+        for i, j  in itertools.product(range(n), range(n)):
+            if c1k[i,j] == 0.0: # potential trouble here? normally matrix was created using zeros and == should work
+                continue
+            elif c2k[i,j] == 0.0:
+                continue
+            else:
+                out += (1/factorial(power)) * pi[i] * c1k[i,j] * np.log(c1k[i,j] / c2k[i,j])
+
+    return out
+
+def relativeEntropyContinuousTime(chain1, chain2, t):
+    n, _ = chain1.shape
+    pi = steadyState(chain1)
+
+    exp1 = la.expm( -t*(np.eye(70) - chain1) )
+    exp2 = la.expm( -t*(np.eye(70) - chain2) )
+
+    out = 0.0
+
+    for i, j  in itertools.product(range(n), range(n)):
+        if exp1[i,j] == 0.0: # potential trouble here? normally matrix was created using zeros and == should work
+            continue
+        elif exp2[i,j] == 0.0:
+            continue
+        else:
+            out +=  pi[i] * exp1[i,j] * np.log(exp1[i,j] / exp2[i,j])
+        # out += chain1[i,j] * np.log(chain1[i,j] / chain2[i,j])
+
+    return out
+
+def attributionFunction(unknown_chains, candidate_chains, author_no, entropy=None, t=0.1, k=1):
     no_candidates = len(candidate_chains)
     if no_candidates < 2:
         print("Number of candidates be must at least 2")
         return
 
-    entropies = np.zeros(no_candidates)
-    for i, chain in enumerate(candidate_chains):
-        entropies[i] = relativeEntropy(unknown, chain)
-        print(entropies[i])
+    count = 0
 
-    return np.argmin(entropies)
+    for u in unknown_chains:
+        entropies = np.zeros(no_candidates)
+        for i, chain in enumerate(candidate_chains):
+            if entropy == "continuous":
+                entropies[i] = relativeEntropyContinuousTime(u, chain, t)
+            elif entropy == "discrete":
+                entropies[i] = relativeEntropyDiscreteTime(u, chain, k)
+            elif entropy == None:
+                entropies[i] = relativeEntropy(u, chain)
+
+            # print(entropies[i])
+
+        if np.argmin(entropies) == author_no:
+            count += 1
+
+    return count
+
 
 def attributionTest(authors, function_words, alpha, num_words_sample, num_words_corpus, D = 10, N = 10):
     no_candidates = len(authors)
