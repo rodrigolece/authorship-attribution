@@ -320,6 +320,23 @@ def relativeEntropyContinuousTime(chain1, chain2, t):
 
     return out
 
+def relativeEntropyPageRank(chain1, chain2):
+    n, _ = chain1.shape
+    vec1 = steadyState(chain1)
+    vec2 = steadyState(chain2)
+
+    out = 0.0
+
+    for i in range(n):
+        if vec1[i] == 0.0:
+            continue
+        elif vec2[i] == 0.0:
+            continue
+        else:
+            out += vec1[i] * np.log(vec1[i] / vec2[i])
+
+    return out
+
 def attributionFunction(unknown_chains, candidate_chains, author_no, entropy=None, t=0.1, k=1):
     no_candidates = len(candidate_chains)
     if no_candidates < 2:
@@ -335,6 +352,8 @@ def attributionFunction(unknown_chains, candidate_chains, author_no, entropy=Non
                 entropies[i] = relativeEntropyContinuousTime(u, chain, t)
             elif entropy == "discrete":
                 entropies[i] = relativeEntropyDiscreteTime(u, chain, k)
+            elif entropy == "pagerank":
+                entropies[i] = relativeEntropyPageRank(u, chain)
             elif entropy == None:
                 entropies[i] = relativeEntropy(u, chain)
 
