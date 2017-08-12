@@ -337,6 +337,56 @@ def relativeEntropyPageRank(chain1, chain2):
 
     return out
 
+def relativeEntropyHubAuthority(chain1, chain2):
+    n, _ = chain1.shape
+
+    U1, _, V1 = la.svd(chain1, full_matrices=True)
+    # Note that by default the vectors originally have negative entries
+    hub1 = -U1[:,0]; authority1 = -V1.conj().T[:,0]
+
+    U2, _, V2 = la.svd(chain2, full_matrices=True)
+    hub2 = -U2[:,0]; authority2 = -V2.conj().T[:,0]
+
+    out = 0.0
+
+    for i in range(n):
+        if hub1[i] == 0.0:
+            continue
+        elif hub2[i] == 0.0:
+            continue
+        else:
+            out += 0.5 * hub1[i] * np.log(hub1[i] / hub2[i])
+
+    for i in range(n):
+        if authority1[i] == 0.0:
+            continue
+        elif authority2[i] == 0.0:
+            continue
+        else:
+            out += 0.5 * authority1[i] * np.log(authority1[i] / authority2[i])
+
+    return out
+
+def relativeEntropyWeightedHubAuthority(chain1, chain2):
+    n, _ = chain1.shape
+
+    U1, _, V1 = la.svd(chain1, full_matrices=True)
+    # Note that by default the vectors originally have negative entries
+    hub1 = -U1[:,0]; authority1 = -V1.conj().T[:,0]
+
+    out = 0.0
+
+    for i, j  in itertools.product(range(n), range(n)):
+        if chain1[i,j] == 0.0:
+            continue
+        elif chain2[i,j] == 0.0:
+            continue
+        else:
+            out += ( 0.5 * hub1[i] * chain1[i,j] * np.log(chain1[i,j] / chain2[i,j])
+                    + 0.5 * authority1[i] * chain1[i,j] * np.log(chain1[i,j] / chain2[i,j]) )
+
+    return out
+
 def attributionFunction(unknown_chains, candidate_chains, author_no, entropy=None, t=0.1, k=1):
     no_candidates = len(candidate_chains)
     if no_candidates < 2:
@@ -354,6 +404,10 @@ def attributionFunction(unknown_chains, candidate_chains, author_no, entropy=Non
                 entropies[i] = relativeEntropyDiscreteTime(u, chain, k)
             elif entropy == "pagerank":
                 entropies[i] = relativeEntropyPageRank(u, chain)
+            elif entropy == "hubauthority":
+                entropies[i] = relativeEntropyHubAuthority(u, chain)
+            elif entropy == "weightedhubauthority":
+                entropies[i] = relativeEntropyWeightedHubAuthority(u, chain)
             elif entropy == None:
                 entropies[i] = relativeEntropy(u, chain)
 
