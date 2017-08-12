@@ -5,7 +5,7 @@ import scipy.io
 import scipy.linalg as la
 import itertools
 from os import system
-from math import inf, factorial
+from math import inf, factorial, isclose
 
 text_directory = '../texts'
 save_directory = '../mat_files'
@@ -271,9 +271,9 @@ def relativeEntropy(chain1, chain2):
     out = 0.0
 
     for i, j  in itertools.product(range(n), range(n)):
-        if chain1[i,j] == 0.0: # potential trouble here? normally matrix was created using zeros and == should work
+        if isclose(chain1[i,j], 0.0):
             continue
-        elif chain2[i,j] == 0.0:
+        elif isclose(chain2[i,j], 0.0):
             continue
         else:
             out += pi[i] * chain1[i,j] * np.log(chain1[i,j] / chain2[i,j])
@@ -291,9 +291,9 @@ def relativeEntropyDiscreteTime(chain1, chain2, k):
         c2k = np.linalg.matrix_power(chain2, power)
 
         for i, j  in itertools.product(range(n), range(n)):
-            if c1k[i,j] == 0.0: # potential trouble here? normally matrix was created using zeros and == should work
+            if isclose(c1k[i,j], 0.0):
                 continue
-            elif c2k[i,j] == 0.0:
+            elif isclose(c2k[i,j], 0.0):
                 continue
             else:
                 out += (1/factorial(power)) * pi[i] * c1k[i,j] * np.log(c1k[i,j] / c2k[i,j])
@@ -310,9 +310,9 @@ def relativeEntropyContinuousTime(chain1, chain2, t):
     out = 0.0
 
     for i, j  in itertools.product(range(n), range(n)):
-        if exp1[i,j] == 0.0: # potential trouble here? normally matrix was created using zeros and == should work
+        if isclose(exp1[i,j], 0.0):
             continue
-        elif exp2[i,j] == 0.0:
+        elif isclose(exp2[i,j], 0.0):
             continue
         else:
             out +=  pi[i] * exp1[i,j] * np.log(exp1[i,j] / exp2[i,j])
@@ -328,9 +328,9 @@ def relativeEntropyPageRank(chain1, chain2):
     out = 0.0
 
     for i in range(n):
-        if vec1[i] == 0.0:
+        if isclose(vec1[i], 0.0):
             continue
-        elif vec2[i] == 0.0:
+        elif isclose(vec2[i], 0.0):
             continue
         else:
             out += vec1[i] * np.log(vec1[i] / vec2[i])
@@ -350,17 +350,17 @@ def relativeEntropyHubAuthority(chain1, chain2):
     out = 0.0
 
     for i in range(n):
-        if hub1[i] == 0.0:
+        if isclose(hub1[i], 0.0):
             continue
-        elif hub2[i] == 0.0:
+        elif isclose(hub2[i], 0.0):
             continue
         else:
             out += 0.5 * hub1[i] * np.log(hub1[i] / hub2[i])
 
     for i in range(n):
-        if authority1[i] == 0.0:
+        if isclose(authority1[i], 0.0):
             continue
-        elif authority2[i] == 0.0:
+        elif isclose(authority2[i], 0.0):
             continue
         else:
             out += 0.5 * authority1[i] * np.log(authority1[i] / authority2[i])
@@ -377,9 +377,9 @@ def relativeEntropyWeightedHubAuthority(chain1, chain2):
     out = 0.0
 
     for i, j  in itertools.product(range(n), range(n)):
-        if chain1[i,j] == 0.0:
+        if isclose(chain1[i,j], 0.0):
             continue
-        elif chain2[i,j] == 0.0:
+        elif isclose(chain2[i,j], 0.0):
             continue
         else:
             out += ( 0.5 * hub1[i] * chain1[i,j] * np.log(chain1[i,j] / chain2[i,j])
