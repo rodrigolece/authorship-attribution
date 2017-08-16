@@ -23,7 +23,7 @@ for unknown = unknown_structs
 %         similarity = ABsimilarityBlockMean(Y);
 %         scores(i) = similarity(1, 2);
         scores(i) = trace(od)/70;
-    %     disp(num2str(scores(i)))
+%         disp(num2str(scores(i)))
     end
 
     [~, idx] = max(scores);
