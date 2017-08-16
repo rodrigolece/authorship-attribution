@@ -261,7 +261,7 @@ def steadyState(mat):
     pi = pi.real
     return pi/sum(pi)
 
-def relativeEntropy(chain1, chain2):
+def KLrate(chain1, chain2):
     n, _ = chain1.shape
     pi = steadyState(chain1)
 
@@ -280,7 +280,22 @@ def relativeEntropy(chain1, chain2):
 
     return out
 
-def relativeEntropyDiscreteTime(chain1, chain2, k):
+def KLdiv(dist1, dist2):
+    n= len(dist1)
+
+    out = 0.0
+
+    for i in range(n):
+        if isclose(dist1[i], 0.0):
+            continue
+        elif isclose(dist2[i], 0.0):
+            continue
+        else:
+            out += dist1[i] * np.log(dist1[i] / dist2[i])
+
+    return out
+
+def KLrateDiscreteTime(chain1, chain2, k):
     n, _ = chain1.shape
     pi = steadyState(chain1)
 
@@ -300,79 +315,39 @@ def relativeEntropyDiscreteTime(chain1, chain2, k):
 
     return out
 
-def relativeEntropyContinuousTime(chain1, chain2, t):
+def KLdivHA(chain1, chain2):
     n, _ = chain1.shape
-    pi = steadyState(chain1)
 
-    exp1 = la.expm( -t*(np.eye(70) - chain1) )
-    exp2 = la.expm( -t*(np.eye(70) - chain2) )
+    U1, _, V1 = la.svd(chain1, full_matrices=True)
+    # Note that by default the vectors originally have negative entries
+    hub1 = -U1[:,0]; authority1 = -V1.conj().T[:,0]
+    hub1 /= sum(hub1); authority1 /= sum(authority1)
+    vec1 = np.concatenate((hub1, authority1))
+
+    U2, _, V2 = la.svd(chain2, full_matrices=True)
+    hub2 = -U2[:,0]; authority2 = -V2.conj().T[:,0]
+    hub2 /= sum(hub2); authority2 /= sum(authority2)
+    vec2 = np.concatenate((hub2, authority2))
 
     out = 0.0
 
-    for i, j  in itertools.product(range(n), range(n)):
-        if isclose(exp1[i,j], 0.0):
-            continue
-        elif isclose(exp2[i,j], 0.0):
-            continue
-        else:
-            out +=  pi[i] * exp1[i,j] * np.log(exp1[i,j] / exp2[i,j])
-        # out += chain1[i,j] * np.log(chain1[i,j] / chain2[i,j])
-
-    return out
-
-def relativeEntropyPageRank(chain1, chain2):
-    n, _ = chain1.shape
-    vec1 = steadyState(chain1)
-    vec2 = steadyState(chain2)
-
-    out = 0.0
-
-    for i in range(n):
+    for i in range(2*n):
         if isclose(vec1[i], 0.0):
             continue
         elif isclose(vec2[i], 0.0):
             continue
         else:
-            out += vec1[i] * np.log(vec1[i] / vec2[i])
+            out += 0.5 * vec1[i] * np.log(vec1[i] / vec2[i])
 
     return out
 
-def relativeEntropyHubAuthority(chain1, chain2):
+def KLrateHA(chain1, chain2):
     n, _ = chain1.shape
 
     U1, _, V1 = la.svd(chain1, full_matrices=True)
     # Note that by default the vectors originally have negative entries
     hub1 = -U1[:,0]; authority1 = -V1.conj().T[:,0]
-
-    U2, _, V2 = la.svd(chain2, full_matrices=True)
-    hub2 = -U2[:,0]; authority2 = -V2.conj().T[:,0]
-
-    out = 0.0
-
-    for i in range(n):
-        if isclose(hub1[i], 0.0):
-            continue
-        elif isclose(hub2[i], 0.0):
-            continue
-        else:
-            out += 0.5 * hub1[i] * np.log(hub1[i] / hub2[i])
-
-    for i in range(n):
-        if isclose(authority1[i], 0.0):
-            continue
-        elif isclose(authority2[i], 0.0):
-            continue
-        else:
-            out += 0.5 * authority1[i] * np.log(authority1[i] / authority2[i])
-
-    return out
-
-def relativeEntropyWeightedHubAuthority(chain1, chain2):
-    n, _ = chain1.shape
-
-    U1, _, V1 = la.svd(chain1, full_matrices=True)
-    # Note that by default the vectors originally have negative entries
-    hub1 = -U1[:,0]; authority1 = -V1.conj().T[:,0]
+    hub1 /= sum(hub1); authority1 /= sum(authority1)
 
     out = 0.0
 
@@ -390,7 +365,7 @@ def relativeEntropyWeightedHubAuthority(chain1, chain2):
 def attributionFunction(unknown_chains, candidate_chains, author_no, entropy=None, t=0.1, k=1):
     no_candidates = len(candidate_chains)
     if no_candidates < 2:
-        print("Number of candidates be must at least 2")
+        print("Error: number of candidates be must at least 2")
         return
 
     count = 0
@@ -398,18 +373,23 @@ def attributionFunction(unknown_chains, candidate_chains, author_no, entropy=Non
     for u in unknown_chains:
         entropies = np.zeros(no_candidates)
         for i, chain in enumerate(candidate_chains):
-            if entropy == "continuous":
-                entropies[i] = relativeEntropyContinuousTime(u, chain, t)
-            elif entropy == "discrete":
-                entropies[i] = relativeEntropyDiscreteTime(u, chain, k)
+            if entropy == None:
+                entropies[i] = KLrate(u, chain)
+            elif entropy == "divergence":
+                entropies[i] = KLdiv(u.flatten(), chain.flatten())
+            elif entropy == "transitionCont":
+                entropies[i] = KLrate(la.expm( -t*(np.eye(70) - u) ), la.expm( -t*(np.eye(70) - chain) ))
+            elif entropy == "transitionDisc":
+                entropies[i] = KLrateDiscreteTime(u, chain, k)
             elif entropy == "pagerank":
-                entropies[i] = relativeEntropyPageRank(u, chain)
-            elif entropy == "hubauthority":
-                entropies[i] = relativeEntropyHubAuthority(u, chain)
-            elif entropy == "weightedhubauthority":
-                entropies[i] = relativeEntropyWeightedHubAuthority(u, chain)
-            elif entropy == None:
-                entropies[i] = relativeEntropy(u, chain)
+                entropies[i] = KLdiv(steadyState(u), steadyState(chain))
+            elif entropy == "divHubAuthority":
+                entropies[i] = KLdivHA(u, chain)
+            elif entropy == "rateHubAuthority":
+                entropies[i] = KLrateHA(u, chain)
+            else:
+                print("Error: Invalid entropy name")
+                return
 
             # print(entropies[i])
 
